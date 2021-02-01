@@ -9,6 +9,10 @@ body
     background-color: $background;
     color: $text;
 }
+.h1
+{
+    margin-bottom: 30px;
+}
 .navbar
 {
     background-color: $navBar;
@@ -18,3 +22,7 @@ body
             color: #ffffff;
         }
     }
+.card{
+    box-shadow: 0 2px 4px rgba(204, 204, 204, 0.8);
+    padding: 20px 40px;
+}
