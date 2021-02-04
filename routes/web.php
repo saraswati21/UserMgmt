@@ -17,7 +17,7 @@ Route::get('/', function () {
     return view('index');
 });
 //Admin Routes
-Route::prefix('admin')->name('admin.')->group(function()
+Route::prefix('admin')->middleware(['auth', 'auth.isAdmin','verified'])->name('admin.')->group(function()
 {
     Route::resource('/users', UserController::class);
 });

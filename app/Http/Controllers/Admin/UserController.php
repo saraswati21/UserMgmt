@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Fortify\CreateNewUser;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Password;
 
 class UserController extends Controller
 {
@@ -16,8 +19,15 @@ class UserController extends Controller
      */
     public function index()
     {
-
-        return view('admin.users.index', ['users'=>User::all()]);
+        if(Gate::denies('logged-in'))
+        {
+            dd('no access allowed');
+        }
+        if(Gate::allows('is-admin'))
+        {
+            return view('admin.users.index', ['users'=>User::paginate(10)]);
+        }
+            dd('you need to be admin');
     }
 
     /**
@@ -27,7 +37,7 @@ class UserController extends Controller
      */
     public function create()
     {
-        //
+        return view('admin.users.create',['roles'=>Role::all()]);
     }
 
     /**
@@ -38,7 +48,18 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        /*$validatedData= $request->validate([
+            'name'=>'required|max:255',
+            'email'=>'required|max:255|unique:users',
+            'password'=>'required|min:8|max:255'
+        ]);
+        $user= User::create($validatedData);*/
+        $newUser= new CreateNewUser();
+        $user=$newUser->create($request->only(['name', 'email', 'password', 'password_confirmation']));
+        $user->roles()->sync($request->roles);
+        Password::sendResetLink($request->only(['email']));
+        $request->session()->flash('success', 'you have created the user');
+        return redirect(route('admin.users.index'));
     }
 
     /**
@@ -60,7 +81,10 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        //
+        return view('admin.users.edit',
+            ['roles'=>Role::all(),
+                'user'=>User::find($id)
+            ]);
     }
 
     /**
@@ -72,7 +96,16 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $user=User::findOrFail($id);
+        if(!$user)
+        {
+            $request->session()->flash('error', 'you cannot edit this user');
+            return redirect(route('admin.users.index'));
+        }
+        $user->update($request->except(['_token', 'roles']));
+        $user->roles()->sync($request->roles);
+        $request->session()->flash('success', 'you have edited the user');
+        return redirect(route('admin.users.index'));
     }
 
     /**
@@ -81,8 +114,10 @@ class UserController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy($id, Request $request)
     {
-        //
+        User::destroy($id);
+        $request->session()->flash('success', 'you have deleted the user');
+        return redirect(route('admin.users.index'));
     }
 }
